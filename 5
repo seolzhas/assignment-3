@@ -1,0 +1,80 @@
+CREATE TABLE departments (
+    department_id SERIAL PRIMARY KEY,
+    budget NUMERIC
+);
+
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    department_id INTEGER REFERENCES departments(department_id),
+    hourly_rate NUMERIC
+);
+
+CREATE TABLE projects (
+    project_id SERIAL PRIMARY KEY,
+    department_id INTEGER REFERENCES departments(department_id),
+    total_hours_allocated INTEGER
+);
+
+CREATE TABLE employee_projects (
+    employee_project_id SERIAL PRIMARY KEY,
+    employee_id INTEGER REFERENCES employees(employee_id),
+    project_id INTEGER REFERENCES projects(project_id),
+    hours_worked INTEGER
+);
+-- Insert sample data for departments
+INSERT INTO departments (budget)
+VALUES 
+    (5000),    -- Department 1 budget
+    (10000),   -- Department 2 budget
+    (15000);   -- Department 3 budget
+
+-- Insert sample data for employees
+INSERT INTO employees (department_id, hourly_rate)
+VALUES 
+    (1, 50),   -- Employee 1, Dept 1, $50/hour
+    (2, 60),   -- Employee 2, Dept 2, $60/hour
+    (3, 40),   -- Employee 3, Dept 3, $40/hour
+    (1, 55),   -- Employee 4, Dept 1, $55/hour
+    (2, 45);   -- Employee 5, Dept 2, $45/hour
+
+-- Insert sample data for projects
+INSERT INTO projects (department_id, total_hours_allocated)
+VALUES 
+    (1, 100),    -- Project 1, Dept 1, 100 hours
+    (2, 200),    -- Project 2, Dept 2, 200 hours
+    (3, 300),    -- Project 3, Dept 3, 300 hours
+    (1, 150),    -- Project 4, Dept 1, 150 hours
+    (2, 250);    -- Project 5, Dept 2, 250 hours
+
+-- Insert sample data for employee_projects
+INSERT INTO employee_projects (employee_id, project_id, hours_worked)
+VALUES 
+    (1, 1, 40),   -- Employee 1 worked 40 hours on Project 1
+    (2, 2, 100),  -- Employee 2 worked 100 hours on Project 2
+    (3, 3, 200),  -- Employee 3 worked 200 hours on Project 3
+    (1, 4, 30),   -- Employee 1 worked 30 hours on Project 4
+    (5, 5, 100);  -- Employee 5 worked 100 hours on Project 5
+    
+ WITH last_month_hours AS (
+    SELECT 
+        ep.employee_id,
+        SUM(ep.hours_worked) AS total_hours_last_month
+    FROM 
+        employee_projects ep
+    JOIN 
+        projects p ON ep.project_id = p.project_id
+    WHERE 
+        ep.hours_worked > 0 -- Include only logged work
+        AND CURRENT_DATE - INTERVAL '30 days' <= CURRENT_DATE  -- Last month filter
+    GROUP BY 
+        ep.employee_id
+)
+SELECT 
+    employee_id,
+    total_hours_last_month / 4.0 AS avg_hours_per_week
+FROM 
+    last_month_hours
+WHERE 
+    total_hours_last_month / 4.0 > 40;
+
+
