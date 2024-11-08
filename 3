@@ -1,0 +1,96 @@
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    city VARCHAR(50),
+    state VARCHAR(50)
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    category VARCHAR(50),
+    price NUMERIC(10, 2),
+    stock_quantity INTEGER
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INTEGER REFERENCES customers(customer_id),
+    order_date TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    order_item_id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(order_id),
+    product_id INTEGER REFERENCES products(product_id),
+    quantity INTEGER
+);
+-- Insert sample customers
+INSERT INTO customers (first_name, last_name, city, state)
+VALUES 
+    ('Alikhan', 'Nurgaliyev', 'Almaty', 'Almaty Region'),
+    ('Yerlan', 'Baitursynov', 'Nur-Sultan', 'Akmola Region'),
+    ('Nursultan', 'Serikbayev', 'Shymkent', 'Turkistan Region'),
+    ('Miras', 'Beketov', 'Karaganda', 'Karaganda Region'),
+    ('Askar', 'Yeleussizov', 'Aktobe', 'Aktobe Region');
+
+-- Insert sample products
+INSERT INTO products (category, price, stock_quantity)
+VALUES 
+    ('Electronics', 250.00, 100),
+    ('Clothing', 50.00, 200),
+    ('Home Appliances', 150.00, 150),
+    ('Books', 20.00, 500),
+    ('Furniture', 300.00, 50);
+
+-- Insert sample orders
+INSERT INTO orders (customer_id, order_date)
+VALUES 
+    (1, '2023-10-10 14:30:00'),
+    (2, '2023-10-12 11:00:00'),
+    (3, '2023-10-14 16:45:00'),
+    (4, '2023-10-15 09:15:00'),
+    (5, '2023-10-18 13:00:00'),
+    (1, '2023-10-19 18:00:00'),
+    (3, '2023-10-20 10:30:00');
+
+-- Insert sample order items
+INSERT INTO order_items (order_id, product_id, quantity)
+VALUES 
+    (1, 1, 2),  -- Alikhan's order of Electronics
+    (2, 2, 5),  -- Yerlan's order of Clothing
+    (3, 3, 1),  -- Nursultan's order of Home Appliances
+    (4, 4, 10), -- Miras's order of Books
+    (5, 5, 1),  -- Askar's order of Furniture
+    (6, 1, 1),  -- Alikhan's additional order of Electronics
+    (7, 3, 3);  -- Nursultan's additional order of Home Appliances
+    
+    
+  SELECT 
+    p.product_id,
+    p.category,
+    daily_sales.order_date,
+    daily_sales.daily_quantity_sold,
+    AVG(daily_sales.daily_quantity_sold) OVER (
+        PARTITION BY p.product_id
+        ORDER BY daily_sales.order_date
+        RANGE BETWEEN INTERVAL '6 days' PRECEDING AND CURRENT ROW
+    ) AS rolling_7_day_avg
+FROM 
+    products p
+JOIN (
+    SELECT 
+        oi.product_id,
+        o.order_date::date AS order_date,
+        SUM(oi.quantity) AS daily_quantity_sold
+    FROM 
+        orders o
+    JOIN 
+        order_items oi ON o.order_id = oi.order_id
+    GROUP BY 
+        oi.product_id, o.order_date::date
+) AS daily_sales ON p.product_id = daily_sales.product_id
+ORDER BY 
+    p.product_id, daily_sales.order_date;
+
+
